@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RBN Analyzer</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh}
+.container{max-width:1200px;margin:0 auto;padding:20px}
+
+header{text-align:center;padding:30px 20px 10px;display:flex;flex-direction:column;align-items:center;gap:6px}
+header h1{font-size:2rem;font-weight:700;background:linear-gradient(135deg,#60a5fa,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+header p{color:#94a3b8;font-size:0.9rem}
+
+.lang-switch{display:flex;gap:0.4rem;margin-top:4px}
+.lang-btn{background:none;border:2px solid transparent;border-radius:6px;font-size:1.4rem;cursor:pointer;padding:0.1rem 0.3rem;transition:border-color 0.2s,opacity 0.2s;opacity:0.5}
+.lang-btn.active{border-color:#3b82f6;opacity:1}
+.lang-btn:hover{opacity:0.8}
+
+.panel{background:#1e293b;border-radius:12px;padding:24px;margin-bottom:24px;border:1px solid #334155}
+.panel h2{font-size:1.1rem;color:#93c5fd;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.panel h2::before{content:'';width:4px;height:20px;background:#3b82f6;border-radius:2px;display:inline-block}
+
+.form-row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+.form-group{flex:1;min-width:200px}
+.form-group label{display:block;font-size:0.8rem;color:#94a3b8;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px}
+.form-group input,.form-group select{width:100%;padding:10px 14px;background:#0f172a;border:1px solid #475569;border-radius:8px;color:#e2e8f0;font-size:0.95rem;outline:none;transition:border-color 0.2s}
+.form-group input:focus,.form-group select:focus{border-color:#3b82f6}
+
+.bands-check{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.bands-check label{display:flex;align-items:center;gap:6px;padding:6px 12px;background:#0f172a;border:1px solid #475569;border-radius:8px;cursor:pointer;font-size:0.85rem;transition:all 0.2s}
+.bands-check label:hover{border-color:#3b82f6}
+.bands-check input:checked+span{color:#60a5fa}
+.bands-check label:has(input:checked){border-color:#3b82f6;background:#172554}
+.bands-check input{accent-color:#3b82f6}
+
+.period-btns{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+.period-btn{padding:6px 14px;border-radius:8px;background:#0f172a;border:1px solid #475569;color:#e2e8f0;cursor:pointer;font-size:0.85rem;transition:all 0.2s}
+.period-btn:hover{border-color:#3b82f6}
+.period-btn.active{background:#172554;border-color:#3b82f6;color:#60a5fa;font-weight:600}
+
+.btn{padding:10px 28px;border:none;border-radius:8px;font-size:0.95rem;font-weight:600;cursor:pointer;transition:all 0.2s}
+.btn-primary{background:linear-gradient(135deg,#3b82f6,#8b5cf6);color:#fff}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 4px 15px rgba(59,130,246,0.4)}
+.btn-primary:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+
+.progress-wrap{display:none;margin-top:16px}
+.progress-bar{height:6px;background:#334155;border-radius:3px;overflow:hidden;position:relative}
+.progress-fill{height:100%;background:linear-gradient(90deg,#3b82f6,#8b5cf6);width:0;transition:width 0.3s;border-radius:3px}
+.progress-fill.indeterminate{width:100%;background:transparent}
+.progress-fill.indeterminate::after{content:'';position:absolute;top:0;left:-40%;width:40%;height:100%;background:linear-gradient(90deg,transparent,#60a5fa,#a78bfa,transparent);animation:slide 1s linear infinite}
+@keyframes slide{0%{left:-40%}100%{left:100%}}
+.progress-text{font-size:0.8rem;color:#94a3b8;margin-top:6px}
+.progress-outer{background:#1e293b;border-radius:10px;padding:16px;border:1px solid #334155}
+
+.summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.stat-card{background:#0f172a;border:1px solid #334155;border-radius:10px;padding:16px;text-align:center}
+.stat-card .value{font-size:1.3rem;font-weight:700;color:#60a5fa}
+.stat-card .label{font-size:0.75rem;color:#94a3b8;text-transform:uppercase;margin-top:4px}
+
+.band-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px}
+.band-tab{padding:6px 16px;border-radius:20px;background:#0f172a;border:1px solid #475569;cursor:pointer;font-size:0.85rem;transition:all 0.2s}
+.band-tab:hover{border-color:#3b82f6}
+.band-tab.active{background:#172554;border-color:#3b82f6;color:#60a5fa}
+
+.chart-grid{display:grid;grid-template-columns:1fr;gap:20px}
+.chart-card{background:#0f172a;border:1px solid #334155;border-radius:10px;overflow:hidden}
+.chart-card h3{padding:14px 16px 0;font-size:0.95rem;color:#cbd5e1}
+.chart-card img{width:100%;display:block;padding:8px}
+.chart-card .data-table{padding:8px 16px 16px}
+.chart-card .data-table table{width:100%;border-collapse:collapse;font-size:0.8rem}
+.chart-card .data-table th{text-align:left;padding:6px 8px;color:#94a3b8;border-bottom:1px solid #334155;background:#0f172a}
+.chart-card .data-table td{padding:5px 8px;border-bottom:1px solid #1e293b}
+.chart-card .data-table tr:hover td{background:#1e293b}
+
+#results-area{display:none}
+
+@media(max-width:768px){
+  .form-row{flex-direction:column;align-items:stretch}
+  .form-group{min-width:100%}
+  header h1{font-size:1.5rem}
+  .summary-grid{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div style="display:flex;align-items:center;gap:12px">
+      <h1>RBN Analyzer</h1>
+      <div class="lang-switch">
+        <button class="lang-btn active" id="langRu" title="Русский">🇷🇺</button>
+        <button class="lang-btn" id="langEn" title="English">🇬🇧</button>
+      </div>
+    </div>
+    <p data-i18n="subtitle">Reverse Beacon Network — статистика и визуализация спотов</p>
+  </header>
+
+  <div class="panel">
+    <h2 data-i18n="params_title">Параметры анализа</h2>
+    <div class="form-row">
+      <div class="form-group">
+        <label data-i18n="label_callsign">Позывной</label>
+        <input type="text" id="callsigns" value="R4NCU" placeholder="R4NCU">
+      </div>
+    </div>
+
+    <div style="margin-top:16px">
+      <label style="font-size:0.8rem;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px" data-i18n="label_bands">Диапазоны</label>
+      <div class="bands-check" id="bands-check">
+        {% for b in bands %}
+        <label><input type="checkbox" name="band" value="{{b}}" {{'checked' if b=='20m' else ''}}><span>{{b}}</span></label>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div style="margin-top:16px">
+      <label style="font-size:0.8rem;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px" data-i18n="label_period">Период анализа</label>
+      <div class="period-btns" id="period-btns">
+        <div class="period-btn" data-days="30" data-i18n="period_month">Месяц</div>
+        <div class="period-btn" data-days="90" data-i18n="period_3months">3 месяца</div>
+        <div class="period-btn" data-days="180" data-i18n="period_6months">Полгода</div>
+        <div class="period-btn active" data-days="365" data-i18n="period_year">Год</div>
+      </div>
+      <input type="hidden" id="days" value="365">
+    </div>
+
+      <div style="margin-top:20px;display:flex;gap:12px;align-items:center">
+        <button class="btn btn-primary" id="run-btn" onclick="startAnalysis()" data-i18n="btn_run">Запустить анализ</button>
+      </div>
+      <div class="progress-outer" id="progress-outer" style="display:none;margin-top:16px">
+        <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+        <div class="progress-text" id="progress-text"></div>
+      </div>
+    </div>
+
+  <div id="results-area">
+    <div class="panel">
+      <h2 data-i18n="summary_title">Сводка</h2>
+      <div class="summary-grid" id="summary-grid"></div>
+    </div>
+
+    <div class="panel">
+      <h2 data-i18n="results_title">Результаты</h2>
+      <div class="band-tabs" id="band-tabs"></div>
+      <div class="chart-grid" id="chart-grid"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const I18N = {
+  ru: {
+    subtitle: 'Reverse Beacon Network — статистика и визуализация спотов',
+    params_title: 'Параметры анализа',
+    label_callsign: 'Позывной',
+    label_bands: 'Диапазоны',
+    label_period: 'Период анализа',
+    period_month: 'Месяц',
+    period_3months: '3 месяца',
+    period_6months: 'Полгода',
+    period_year: 'Год',
+    btn_run: 'Запустить анализ',
+    summary_title: 'Сводка',
+    results_title: 'Результаты',
+    total_spots: 'Всего спотов',
+    unique_dx: 'Уникальных DX',
+    unique_countries: 'Стран',
+    avg_per_day: 'В среднем/день',
+    stat_bands: 'Диапазоны',
+    stat_callsigns: 'Позывные',
+    stat_period: 'Период',
+    err_no_callsign: 'Укажите позывной',
+    err_no_bands: 'Выберите хотя бы один диапазон',
+    loading: 'Загрузка данных...',
+    generating: 'Генерация графиков...',
+    done: 'Готово',
+    no_data: 'Данные не найдены',
+  },
+  en: {
+    subtitle: 'Reverse Beacon Network — spot statistics and visualization',
+    params_title: 'Analysis Parameters',
+    label_callsign: 'Callsign',
+    label_bands: 'Bands',
+    label_period: 'Analysis Period',
+    period_month: 'Month',
+    period_3months: '3 Months',
+    period_6months: '6 Months',
+    period_year: 'Year',
+    btn_run: 'RUN ANALYSIS',
+    summary_title: 'Summary',
+    results_title: 'Results',
+    total_spots: 'Total Spots',
+    unique_dx: 'Unique DX',
+    unique_countries: 'Countries',
+    avg_per_day: 'Avg per Day',
+    stat_bands: 'Bands',
+    stat_callsigns: 'Callsigns',
+    stat_period: 'Period',
+    err_no_callsign: 'Enter callsign',
+    err_no_bands: 'Select at least one band',
+    loading: 'Loading data...',
+    generating: 'Generating charts...',
+    done: 'Done',
+    no_data: 'No data found',
+  }
+};
+
+let lang = localStorage.getItem('rbn_lang') || 'ru';
+function t(key) { return (I18N[lang] && I18N[lang][key]) || key; }
+
+function applyLang() {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    el.textContent = t(el.dataset.i18n);
+  });
+  document.getElementById('langRu').classList.toggle('active', lang === 'ru');
+  document.getElementById('langEn').classList.toggle('active', lang === 'en');
+  document.documentElement.lang = lang;
+}
+
+document.getElementById('langRu').addEventListener('click', () => { lang = 'ru'; localStorage.setItem('rbn_lang', lang); applyLang(); });
+document.getElementById('langEn').addEventListener('click', () => { lang = 'en'; localStorage.setItem('rbn_lang', lang); applyLang(); });
+
+// Period buttons
+document.querySelectorAll('.period-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('days').value = btn.dataset.days;
+  });
+});
+
+let currentJob = null;
+let allCharts = [];
+
+async function startAnalysis() {
+  const callsigns = document.getElementById('callsigns').value.trim();
+  const days = parseInt(document.getElementById('days').value) || 365;
+  const bands = [...document.querySelectorAll('input[name=band]:checked')].map(b => b.value);
+
+  if (!callsigns) { alert(t('err_no_callsign')); return; }
+  if (!bands.length) { alert(t('err_no_bands')); return; }
+
+  document.getElementById('run-btn').disabled = true;
+  document.getElementById('progress-outer').style.display = 'block';
+  document.getElementById('results-area').style.display = 'none';
+  document.getElementById('progress-fill').style.width = '0%';
+  document.getElementById('progress-fill').classList.add('indeterminate');
+  document.getElementById('progress-text').textContent = t('loading');
+
+  try {
+    const resp = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({callsigns, bands, days, lang})
+    });
+    const data = await resp.json();
+    if (data.error) { alert(data.error); resetUI(); return; }
+    currentJob = data.job_id;
+    pollStatus();
+  } catch(e) {
+    alert(e.message);
+    resetUI();
+  }
+}
+
+function pollStatus() {
+  if (!currentJob) return;
+  fetch('/api/status/' + currentJob)
+    .then(r => r.json())
+    .then(data => {
+      const fill = document.getElementById('progress-fill');
+      fill.style.width = (data.progress || 0) + '%';
+      if (data.progress > 0) fill.classList.remove('indeterminate');
+      document.getElementById('progress-text').textContent = data.message || '';
+
+      if (data.status === 'running' || data.status === 'queued') {
+        setTimeout(pollStatus, 1000);
+      } else if (data.status === 'done' && data.charts) {
+        renderResults(data);
+        resetUI();
+      } else if (data.status === 'done') {
+        document.getElementById('progress-text').textContent = data.message || t('no_data');
+        resetUI();
+      } else if (data.status === 'error') {
+        alert(data.message);
+        resetUI();
+      } else {
+        setTimeout(pollStatus, 1500);
+      }
+    })
+    .catch(() => setTimeout(pollStatus, 2000));
+}
+
+function resetUI() {
+  document.getElementById('run-btn').disabled = false;
+}
+
+function renderResults(data) {
+  allCharts = data.charts || [];
+  const s = data.summary || {};
+
+  const sg = document.getElementById('summary-grid');
+  sg.innerHTML = `
+    <div class="stat-card"><div class="value">${(s.total_spots||0).toLocaleString()}</div><div class="label">${t('total_spots')}</div></div>
+    <div class="stat-card"><div class="value">${s.unique_dx||0}</div><div class="label">${t('unique_dx')}</div></div>
+    <div class="stat-card"><div class="value">${s.unique_countries||0}</div><div class="label">${t('unique_countries')}</div></div>
+    <div class="stat-card"><div class="value">${s.avg_per_day||0}</div><div class="label">${t('avg_per_day')}</div></div>
+    <div class="stat-card"><div class="value">${(s.bands||[]).join(', ')}</div><div class="label">${t('stat_bands')}</div></div>
+    <div class="stat-card"><div class="value">${(s.callsigns||[]).join(', ')}</div><div class="label">${t('stat_callsigns')}</div></div>
+  `;
+
+  const bands = [...new Set(allCharts.map(c => c.band))];
+  const tabs = document.getElementById('band-tabs');
+  tabs.innerHTML = bands.map((b, i) =>
+    `<div class="band-tab ${i===0?'active':''}" onclick="showBand('${b}',this)">${b}</div>`
+  ).join('');
+
+  showBand(bands[0]);
+  document.getElementById('results-area').style.display = 'block';
+  document.getElementById('results-area').scrollIntoView({behavior: 'smooth'});
+}
+
+function showBand(band, el) {
+  if (el) {
+    document.querySelectorAll('.band-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  const grid = document.getElementById('chart-grid');
+  const charts = allCharts.filter(c => c.band === band);
+
+  grid.innerHTML = charts.map(c => {
+    const headers = c.data?.length ? Object.keys(c.data[0]) : [];
+    const rows = (c.data || []).map(row =>
+      '<tr>' + headers.map(h => `<td>${row[h] ?? ''}</td>`).join('') + '</tr>'
+    ).join('');
+    const headerRow = headers.length ? '<tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr>' : '';
+
+    return `
+      <div class="chart-card">
+        <h3>${c.title}</h3>
+        <img src="/results/${currentJob}/${c.file}" alt="${c.title}" loading="lazy">
+        ${rows ? `<div class="data-table"><table>${headerRow}${rows}</table></div>` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+applyLang();
+</script>
+</body>
+</html>
