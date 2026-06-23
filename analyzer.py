@@ -48,16 +48,19 @@ def resolve_country(prefix, lang='ru'):
 def download_day(date_str, callsign, band):
     url = RBN_URL.format(date=date_str)
     try:
-        resp = requests.get(url, timeout=30)
+        resp = requests.get(url, timeout=60)
         if resp.status_code == 200:
             with zipfile.ZipFile(io.BytesIO(resp.content)) as z:
                 csv_name = f"{date_str}.csv"
                 if csv_name in z.namelist():
                     with z.open(csv_name) as f:
                         df = pd.read_csv(f, low_memory=False)
-                        return df[(df['callsign'] == callsign) & (df['band'] == band)]
-    except Exception:
-        pass
+                        filtered = df[(df['callsign'] == callsign) & (df['band'] == band)]
+                        return filtered
+        else:
+            print(f"HTTP {resp.status_code} for {date_str}")
+    except Exception as e:
+        print(f"Error {date_str}: {e}")
     return None
 
 
@@ -71,9 +74,11 @@ def collect_data(callsigns, bands, days=365, progress_cb=None):
     frames = []
     total = len(callsigns) * len(bands) * len(dates)
     done = 0
+    errors = 0
 
     for cs in callsigns:
         for band in bands:
+            print(f"Starting download: {cs} / {band} / {len(dates)} days")
             with ThreadPoolExecutor(max_workers=5) as ex:
                 futures = {ex.submit(download_day, d, cs, band): d for d in dates}
                 for fut in futures:
@@ -82,14 +87,19 @@ def collect_data(callsigns, bands, days=365, progress_cb=None):
                         r = res.copy()
                         r['callsign_spotter'] = cs
                         frames.append(r)
+                    else:
+                        errors += 1
                     done += 1
                     if progress_cb and (done % 20 == 0 or done == total):
                         progress_cb(done, total)
+            print(f"Done: {cs}/{band} — {len(frames)} frames, {errors} errors")
 
     if not frames:
+        print(f"No data collected. Total errors: {errors}/{total}")
         return None
     df = pd.concat(frames, ignore_index=True)
     df['date'] = pd.to_datetime(df['date'])
+    print(f"Final dataset: {len(df)} rows")
     return df
 
 

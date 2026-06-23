@@ -27,7 +27,9 @@ def run_job(job_id, callsigns, bands, days, lang):
         df = collect_data(callsigns, bands, days, progress_cb=progress)
         if df is None:
             jobs[job_id]['status'] = 'done'
-            jobs[job_id]['message'] = 'No data found' if lang == 'en' else 'Данные не найдены'
+            msg = 'No data found. Check logs for details.' if lang == 'en' else 'Данные не найдены. Проверьте логи.'
+            jobs[job_id]['message'] = msg
+            print(f"Job {job_id}: {msg}")
             return
 
         out = os.path.join(RESULTS_DIR, job_id)
@@ -51,6 +53,9 @@ def run_job(job_id, callsigns, bands, days, lang):
     except Exception as e:
         jobs[job_id]['status'] = 'error'
         jobs[job_id]['message'] = str(e)
+        print(f"Job {job_id} ERROR: {e}")
+        import traceback
+        traceback.print_exc()
 
 
 @app.route('/')
