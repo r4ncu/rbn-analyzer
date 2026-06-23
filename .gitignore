@@ -2,5 +2,6 @@ __pycache__/
 *.pyc
 .env
 static/results/
+.rbn_cache/
 venv/
 .DS_Store

@@ -3,11 +3,14 @@ import requests
 import zipfile
 import io
 import os
-import csv
 from concurrent.futures import ThreadPoolExecutor
 from prefix_data import PREFIX_TO_COUNTRY, PREFIX_TO_COUNTRY_EN
 
+import pandas as pd
+
 RBN_URL = "https://data.reversebeacon.net/rbn_history/{date}.zip"
+CACHE_DIR = os.path.join(os.path.dirname(__file__), '.rbn_cache')
+REQUIRED_COLS = ['callsign', 'band', 'dx', 'dx_pfx', 'date']
 
 ALL_BANDS = ["160m", "80m", "60m", "40m", "30m", "20m", "17m", "15m", "12m", "10m"]
 ALL_DAYS_EN = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
@@ -46,18 +49,31 @@ def resolve_country(prefix, lang='ru'):
         return p
 
 
-def download_day(date_str, callsign, band):
+def download_day(date_str, callsign, band, session=None):
+    cache_file = os.path.join(CACHE_DIR, f'{date_str}.pkl')
+
+    if os.path.exists(cache_file):
+        try:
+            df = pd.read_pickle(cache_file)
+            filtered = df[(df['callsign'] == callsign) & (df['band'] == band)]
+            return filtered.to_dict('records') if not filtered.empty else None
+        except Exception:
+            pass
+
     url = RBN_URL.format(date=date_str)
     try:
-        resp = requests.get(url, timeout=60)
+        s = session or requests
+        resp = s.get(url, timeout=60)
         if resp.status_code == 200:
             with zipfile.ZipFile(io.BytesIO(resp.content)) as z:
                 csv_name = f"{date_str}.csv"
                 if csv_name in z.namelist():
                     with z.open(csv_name) as f:
-                        reader = csv.DictReader(io.TextIOWrapper(f, encoding='utf-8'))
-                        rows = [row for row in reader if row.get('callsign') == callsign and row.get('band') == band]
-                        return rows if rows else None
+                        df = pd.read_csv(f, usecols=REQUIRED_COLS, low_memory=False)
+                        os.makedirs(CACHE_DIR, exist_ok=True)
+                        df.to_pickle(cache_file)
+                        filtered = df[(df['callsign'] == callsign) & (df['band'] == band)]
+                        return filtered.to_dict('records') if not filtered.empty else None
         else:
             print(f"HTTP {resp.status_code} for {date_str}")
     except Exception as e:
@@ -76,11 +92,14 @@ def collect_data(callsigns, bands, days=365, progress_cb=None):
     done = 0
     errors = 0
 
+    session = requests.Session()
+    session.headers.update({'User-Agent': 'RBN-Analyzer/1.0'})
+
     for cs in callsigns:
         for band in bands:
             print(f"Starting download: {cs} / {band} / {len(dates)} days")
-            with ThreadPoolExecutor(max_workers=5) as ex:
-                futures = {ex.submit(download_day, d, cs, band): d for d in dates}
+            with ThreadPoolExecutor(max_workers=20) as ex:
+                futures = {ex.submit(download_day, d, cs, band, session): d for d in dates}
                 for fut in futures:
                     res = fut.result()
                     if res is not None and len(res) > 0:
