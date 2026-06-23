@@ -6,6 +6,8 @@ import os
 from concurrent.futures import ThreadPoolExecutor
 from prefix_data import PREFIX_TO_COUNTRY, PREFIX_TO_COUNTRY_EN
 
+import pandas as pd
+
 RBN_URL = "https://data.reversebeacon.net/rbn_history/{date}.zip"
 
 ALL_BANDS = ["160m", "80m", "60m", "40m", "30m", "20m", "17m", "15m", "12m", "10m"]
@@ -65,7 +67,6 @@ def download_day(date_str, callsign, band):
 
 
 def collect_data(callsigns, bands, days=365, progress_cb=None):
-    import pandas as pd
     end_date = datetime.date.today()
     start_date = end_date - datetime.timedelta(days=days)
     dates = [(start_date + datetime.timedelta(days=i)).strftime("%Y%m%d")
@@ -104,7 +105,6 @@ def collect_data(callsigns, bands, days=365, progress_cb=None):
 
 
 def make_charts(df, output_dir, lang='ru'):
-    import pandas as pd
     import matplotlib
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
