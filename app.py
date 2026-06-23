@@ -85,7 +85,7 @@ def api_analyze():
     data = request.json
     callsigns = [c.strip().upper() for c in data.get('callsigns', '').split(',') if c.strip()]
     bands = data.get('bands', ['20m'])
-    days = min(int(data.get('days', 365)), 90)
+    days = min(int(data.get('days', 365)), 365)
     lang = data.get('lang', 'ru')
     if lang not in ('ru', 'en'):
         lang = 'ru'
