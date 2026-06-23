@@ -14,9 +14,26 @@ os.makedirs(RESULTS_DIR, exist_ok=True)
 jobs = {}
 
 
+@app.route('/health')
+def health():
+    return 'ok'
+
+
 def run_job(job_id, callsigns, bands, days, lang):
     try:
         jobs[job_id]['status'] = 'running'
+        jobs[job_id]['message'] = 'Testing connection...' if lang == 'en' else 'Проверка соединения...'
+
+        import requests as _req
+        try:
+            _r = _req.head('https://data.reversebeacon.net/', timeout=10)
+            print(f"RBN connectivity: HTTP {_r.status_code}")
+        except Exception as e:
+            print(f"RBN connectivity FAILED: {e}")
+            jobs[job_id]['status'] = 'error'
+            jobs[job_id]['message'] = f'RBN unreachable: {e}'
+            return
+
         jobs[job_id]['message'] = 'Loading...' if lang == 'en' else 'Загрузка данных...'
 
         def progress(done, total):

@@ -90,7 +90,7 @@ def collect_data(callsigns, bands, days=365, progress_cb=None):
                     else:
                         errors += 1
                     done += 1
-                    if progress_cb and (done % 20 == 0 or done == total):
+                    if progress_cb and (done % 5 == 0 or done == total):
                         progress_cb(done, total)
             print(f"Done: {cs}/{band} — {len(frames)} rows, {errors} errors")
 
