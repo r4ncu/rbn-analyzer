@@ -10,6 +10,9 @@ Web application for analyzing **Reverse Beacon Network** data — spot statistic
 - **Full country names** — 1105 prefix mappings (RU/EN)
 - **Flexible period** — buttons: month, 3 months, 6 months, year
 
+<img width="3186" height="20550" alt="RBN-Analyzer-06-23-2026_04_30_PM" src="https://github.com/user-attachments/assets/ed722d8a-7100-4148-87f6-75a13a5d68be" />
+
+
 ## Local Installation
 
 ### Requirements
