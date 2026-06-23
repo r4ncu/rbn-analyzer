@@ -3,11 +3,6 @@ import requests
 import zipfile
 import io
 import os
-import pandas as pd
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-import seaborn as sns
 from concurrent.futures import ThreadPoolExecutor
 from prefix_data import PREFIX_TO_COUNTRY, PREFIX_TO_COUNTRY_EN
 
@@ -67,6 +62,7 @@ def download_day(date_str, callsign, band):
 
 
 def collect_data(callsigns, bands, days=365, progress_cb=None):
+    import pandas as pd
     end_date = datetime.date.today()
     start_date = end_date - datetime.timedelta(days=days)
     dates = [(start_date + datetime.timedelta(days=i)).strftime("%Y%m%d")
@@ -78,7 +74,7 @@ def collect_data(callsigns, bands, days=365, progress_cb=None):
 
     for cs in callsigns:
         for band in bands:
-            with ThreadPoolExecutor(max_workers=10) as ex:
+            with ThreadPoolExecutor(max_workers=5) as ex:
                 futures = {ex.submit(download_day, d, cs, band): d for d in dates}
                 for fut in futures:
                     res = fut.result()
@@ -98,6 +94,11 @@ def collect_data(callsigns, bands, days=365, progress_cb=None):
 
 
 def make_charts(df, output_dir, lang='ru'):
+    import pandas as pd
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+    import seaborn as sns
     os.makedirs(output_dir, exist_ok=True)
     results = []
     bands = sorted(df['band'].unique(), key=lambda b: ALL_BANDS.index(b) if b in ALL_BANDS else 999)
