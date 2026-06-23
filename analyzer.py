@@ -3,10 +3,9 @@ import requests
 import zipfile
 import io
 import os
+import csv
 from concurrent.futures import ThreadPoolExecutor
 from prefix_data import PREFIX_TO_COUNTRY, PREFIX_TO_COUNTRY_EN
-
-import pandas as pd
 
 RBN_URL = "https://data.reversebeacon.net/rbn_history/{date}.zip"
 
@@ -56,9 +55,9 @@ def download_day(date_str, callsign, band):
                 csv_name = f"{date_str}.csv"
                 if csv_name in z.namelist():
                     with z.open(csv_name) as f:
-                        df = pd.read_csv(f, low_memory=False)
-                        filtered = df[(df['callsign'] == callsign) & (df['band'] == band)]
-                        return filtered
+                        reader = csv.DictReader(io.TextIOWrapper(f, encoding='utf-8'))
+                        rows = [row for row in reader if row.get('callsign') == callsign and row.get('band') == band]
+                        return rows if rows else None
         else:
             print(f"HTTP {resp.status_code} for {date_str}")
     except Exception as e:
@@ -84,22 +83,24 @@ def collect_data(callsigns, bands, days=365, progress_cb=None):
                 futures = {ex.submit(download_day, d, cs, band): d for d in dates}
                 for fut in futures:
                     res = fut.result()
-                    if res is not None and not res.empty:
-                        r = res.copy()
-                        r['callsign_spotter'] = cs
-                        frames.append(r)
+                    if res is not None and len(res) > 0:
+                        for row in res:
+                            row['callsign_spotter'] = cs
+                        frames.extend(res)
                     else:
                         errors += 1
                     done += 1
                     if progress_cb and (done % 20 == 0 or done == total):
                         progress_cb(done, total)
-            print(f"Done: {cs}/{band} — {len(frames)} frames, {errors} errors")
+            print(f"Done: {cs}/{band} — {len(frames)} rows, {errors} errors")
 
     if not frames:
         print(f"No data collected. Total errors: {errors}/{total}")
         return None
-    df = pd.concat(frames, ignore_index=True)
-    df['date'] = pd.to_datetime(df['date'])
+    import pandas as pd
+    df = pd.DataFrame(frames)
+    df['date'] = pd.to_datetime(df['date'], errors='coerce')
+    df = df.dropna(subset=['date'])
     print(f"Final dataset: {len(df)} rows")
     return df
 
